@@ -1,12 +1,30 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, g
 from app import db
 from app.models.models import User, Asset, Position, Transaction, VolatilityRecord
 from app.services.web3_service import Web3Service
 from app.services.volatility_service import VolatilityService
 
 api_bp = Blueprint('api', __name__)
-web3_service = Web3Service()
-volatility_service = VolatilityService()
+
+def get_web3_service():
+    if 'web3_service' not in g:
+        g.web3_service = Web3Service()
+    return g.web3_service
+
+def get_volatility_service():
+    if 'volatility_service' not in g:
+        g.volatility_service = VolatilityService()
+    return g.volatility_service
+
+@api_bp.before_request
+def ensure_services():
+    get_web3_service()
+    get_volatility_service()
+
+@api_bp.teardown_app_request
+def teardown_services(exception=None):
+    web3_service = g.pop('web3_service', None)
+    volatility_service = g.pop('volatility_service', None)
 
 # Asset endpoints
 @api_bp.route('/assets', methods=['GET'])
@@ -18,7 +36,7 @@ def get_assets():
     for asset in assets:
         try:
             # Get on-chain data
-            asset_details = web3_service.get_asset_details(asset.symbol)
+            asset_details = get_web3_service().get_asset_details(asset.symbol)
             
             # Get latest volatility record
             volatility = VolatilityRecord.query.filter_by(asset_id=asset.id).order_by(VolatilityRecord.timestamp.desc()).first()
@@ -29,12 +47,12 @@ def get_assets():
                 'name': asset.name,
                 'tokenAddress': asset.token_address,
                 'baseInterestRate': asset.base_interest_rate / 100,  # Convert basis points to percentage
-                'effectiveInterestRate': web3_service.get_current_interest_rate(asset.symbol) / 100,
+                'effectiveInterestRate': get_web3_service().get_current_interest_rate(asset.symbol) / 100,
                 'volatility': volatility.volatility if volatility else 0,
                 'collateralFactor': asset.collateral_factor / 100,  # Convert basis points to percentage
                 'totalDeposited': asset_details[1],
                 'totalBorrowed': asset_details[2],
-                'price': web3_service.get_asset_price(asset.symbol) / 10**8,  # Chainlink returns prices with 8 decimals
+                'price': get_web3_service().get_asset_price(asset.symbol) / 10**8,  # Chainlink returns prices with 8 decimals
             })
         except Exception as e:
             current_app.logger.error(f"Error processing asset {asset.symbol}: {str(e)}")
@@ -48,7 +66,7 @@ def get_asset(symbol):
     
     try:
         # Get on-chain data
-        asset_details = web3_service.get_asset_details(asset.symbol)
+        asset_details = get_web3_service().get_asset_details(asset.symbol)
         
         # Get latest volatility record
         volatility = VolatilityRecord.query.filter_by(asset_id=asset.id).order_by(VolatilityRecord.timestamp.desc()).first()
@@ -59,12 +77,12 @@ def get_asset(symbol):
             'name': asset.name,
             'tokenAddress': asset.token_address,
             'baseInterestRate': asset.base_interest_rate / 100,
-            'effectiveInterestRate': web3_service.get_current_interest_rate(asset.symbol) / 100,
+            'effectiveInterestRate': get_web3_service().get_current_interest_rate(asset.symbol) / 100,
             'volatility': volatility.volatility if volatility else 0,
             'collateralFactor': asset.collateral_factor / 100,
             'totalDeposited': asset_details[1],
             'totalBorrowed': asset_details[2],
-            'price': web3_service.get_asset_price(asset.symbol) / 10**8,
+            'price': get_web3_service().get_asset_price(asset.symbol) / 10**8,
         }
         
         return jsonify(result)
@@ -77,7 +95,7 @@ def get_asset(symbol):
 def get_user(address):
     """Get user details and positions"""
     # Validate address
-    if not web3_service.validate_address(address):
+    if not get_web3_service().validate_address(address):
         return jsonify({'error': 'Invalid Ethereum address'}), 400
     
     # Find or create user
@@ -94,7 +112,7 @@ def get_user(address):
     for asset in active_assets:
         try:
             # Get on-chain position data
-            position_data = web3_service.get_user_position(address, asset.symbol)
+            position_data = get_web3_service().get_user_position(address, asset.symbol)
             deposited, borrowed, interest_due = position_data
             
             if deposited > 0 or borrowed > 0:
@@ -125,12 +143,12 @@ def prepare_deposit():
     if not all([address, symbol, amount]):
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    if not web3_service.validate_address(address):
+    if not get_web3_service().validate_address(address):
         return jsonify({'error': 'Invalid Ethereum address'}), 400
     
     try:
         # Create transaction data
-        tx_data = web3_service.create_deposit_transaction(address, symbol, int(amount))
+        tx_data = get_web3_service().create_deposit_transaction(address, symbol, int(amount))
         return jsonify(tx_data)
     except Exception as e:
         current_app.logger.error(f"Error preparing deposit transaction: {str(e)}")
@@ -147,12 +165,12 @@ def prepare_withdraw():
     if not all([address, symbol, amount]):
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    if not web3_service.validate_address(address):
+    if not get_web3_service().validate_address(address):
         return jsonify({'error': 'Invalid Ethereum address'}), 400
     
     try:
         # Create transaction data
-        tx_data = web3_service.create_withdraw_transaction(address, symbol, int(amount))
+        tx_data = get_web3_service().create_withdraw_transaction(address, symbol, int(amount))
         return jsonify(tx_data)
     except Exception as e:
         current_app.logger.error(f"Error preparing withdraw transaction: {str(e)}")
@@ -169,12 +187,12 @@ def prepare_borrow():
     if not all([address, symbol, amount]):
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    if not web3_service.validate_address(address):
+    if not get_web3_service().validate_address(address):
         return jsonify({'error': 'Invalid Ethereum address'}), 400
     
     try:
         # Create transaction data
-        tx_data = web3_service.create_borrow_transaction(address, symbol, int(amount))
+        tx_data = get_web3_service().create_borrow_transaction(address, symbol, int(amount))
         return jsonify(tx_data)
     except Exception as e:
         current_app.logger.error(f"Error preparing borrow transaction: {str(e)}")
@@ -191,12 +209,12 @@ def prepare_repay():
     if not all([address, symbol, amount]):
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    if not web3_service.validate_address(address):
+    if not get_web3_service().validate_address(address):
         return jsonify({'error': 'Invalid Ethereum address'}), 400
     
     try:
         # Create transaction data
-        tx_data = web3_service.create_repay_transaction(address, symbol, int(amount))
+        tx_data = get_web3_service().create_repay_transaction(address, symbol, int(amount))
         return jsonify(tx_data)
     except Exception as e:
         current_app.logger.error(f"Error preparing repay transaction: {str(e)}")
@@ -217,7 +235,7 @@ def record_transaction():
     
     try:
         # Get receipt to confirm transaction
-        receipt = web3_service.get_transaction_receipt(tx_hash)
+        receipt = get_web3_service().get_transaction_receipt(tx_hash)
         if not receipt or receipt['status'] != 1:
             return jsonify({'error': 'Transaction failed or not found'}), 400
         

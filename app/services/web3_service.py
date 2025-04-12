@@ -1,7 +1,7 @@
 import json
 import os
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+from web3.providers import HTTPProvider
 from flask import current_app
 
 class Web3Service:
@@ -24,10 +24,8 @@ class Web3Service:
                 self.provider_uri = current_app.config['WEB3_PROVIDER_URI']
             
             # Connect to provider
-            self.w3 = Web3(Web3.HTTPProvider(self.provider_uri))
-            
-            # Add middleware for PoA chains like Polygon
-            self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            provider = HTTPProvider(self.provider_uri)
+            self.w3 = Web3(provider)
             
             # Check connection
             if not self.w3.is_connected():

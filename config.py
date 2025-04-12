@@ -16,8 +16,5 @@ class Config:
     WEB3_PROVIDER_URI = os.environ.get('WEB3_PROVIDER_URI') or 'http://localhost:8545'
     CONTRACT_ADDRESS = os.environ.get('CONTRACT_ADDRESS')
     
-    # Redis configuration
-    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
-    
     # API Keys
-    COINGECKO_API_KEY = os.environ.get('COINGECKO_API_KEY')
+    COINDESK_API_KEY = os.environ.get('COINDESK_API_KEY')

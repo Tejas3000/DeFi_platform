@@ -13,8 +13,14 @@ def create_app(config_class=Config):
     # Initialize extensions with app
     db.init_app(app)
     
-    # Enable CORS
-    CORS(app)
+    # Enable CORS with proper configuration
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["http://localhost:5173"],  # Vite's default development port
+            "methods": ["GET", "POST", "PUT", "DELETE"],
+            "allow_headers": ["Content-Type"]
+        }
+    })
     
     # Import and register blueprints
     from app.api.routes import api_bp
