@@ -1,10 +1,27 @@
 from flask import Blueprint, jsonify, request, current_app, g
+from werkzeug.exceptions import BadRequest, NotFound
 from app import db
 from app.models.models import User, Asset, Position, Transaction, VolatilityRecord
 from app.services.web3_service import Web3Service
 from app.services.volatility_service import VolatilityService
+import functools
 
 api_bp = Blueprint('api', __name__)
+
+def handle_errors(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except ValueError as e:
+            current_app.logger.error(f"Validation error: {str(e)}")
+            return jsonify({'error': str(e)}), 400
+        except NotFound:
+            return jsonify({'error': 'Resource not found'}), 404
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error: {str(e)}")
+            return jsonify({'error': 'Internal server error'}), 500
+    return decorated_function
 
 def get_web3_service():
     if 'web3_service' not in g:
@@ -133,140 +150,117 @@ def get_user(address):
 
 # Transaction preparation endpoints
 @api_bp.route('/transactions/deposit', methods=['POST'])
+@handle_errors
 def prepare_deposit():
     """Prepare deposit transaction for signing"""
     data = request.json
-    address = data.get('address')
-    symbol = data.get('symbol')
-    amount = data.get('amount')
-    
-    if not all([address, symbol, amount]):
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    if not get_web3_service().validate_address(address):
-        return jsonify({'error': 'Invalid Ethereum address'}), 400
-    
-    try:
-        # Create transaction data
-        tx_data = get_web3_service().create_deposit_transaction(address, symbol, int(amount))
-        return jsonify(tx_data)
-    except Exception as e:
-        current_app.logger.error(f"Error preparing deposit transaction: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+    if not data or not all(k in data for k in ['address', 'symbol', 'amount']):
+        raise BadRequest('Missing required parameters')
+
+    address = data['address']
+    symbol = data['symbol']
+    amount = data['amount']
+
+    tx_data = get_web3_service().create_deposit_transaction(address, symbol, amount)
+    return jsonify(tx_data)
 
 @api_bp.route('/transactions/withdraw', methods=['POST'])
+@handle_errors
 def prepare_withdraw():
     """Prepare withdraw transaction for signing"""
     data = request.json
-    address = data.get('address')
-    symbol = data.get('symbol')
-    amount = data.get('amount')
-    
-    if not all([address, symbol, amount]):
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    if not get_web3_service().validate_address(address):
-        return jsonify({'error': 'Invalid Ethereum address'}), 400
-    
-    try:
-        # Create transaction data
-        tx_data = get_web3_service().create_withdraw_transaction(address, symbol, int(amount))
-        return jsonify(tx_data)
-    except Exception as e:
-        current_app.logger.error(f"Error preparing withdraw transaction: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+    if not data or not all(k in data for k in ['address', 'symbol', 'amount']):
+        raise BadRequest('Missing required parameters')
+
+    address = data['address']
+    symbol = data['symbol']
+    amount = data['amount']
+
+    tx_data = get_web3_service().create_withdraw_transaction(address, symbol, amount)
+    return jsonify(tx_data)
 
 @api_bp.route('/transactions/borrow', methods=['POST'])
+@handle_errors
 def prepare_borrow():
     """Prepare borrow transaction for signing"""
     data = request.json
-    address = data.get('address')
-    symbol = data.get('symbol')
-    amount = data.get('amount')
-    
-    if not all([address, symbol, amount]):
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    if not get_web3_service().validate_address(address):
-        return jsonify({'error': 'Invalid Ethereum address'}), 400
-    
-    try:
-        # Create transaction data
-        tx_data = get_web3_service().create_borrow_transaction(address, symbol, int(amount))
-        return jsonify(tx_data)
-    except Exception as e:
-        current_app.logger.error(f"Error preparing borrow transaction: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+    if not data or not all(k in data for k in ['address', 'symbol', 'amount']):
+        raise BadRequest('Missing required parameters')
+
+    address = data['address']
+    symbol = data['symbol']
+    amount = data['amount']
+
+    tx_data = get_web3_service().create_borrow_transaction(address, symbol, amount)
+    return jsonify(tx_data)
 
 @api_bp.route('/transactions/repay', methods=['POST'])
+@handle_errors
 def prepare_repay():
     """Prepare repay transaction for signing"""
     data = request.json
-    address = data.get('address')
-    symbol = data.get('symbol')
-    amount = data.get('amount')
-    
-    if not all([address, symbol, amount]):
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    if not get_web3_service().validate_address(address):
-        return jsonify({'error': 'Invalid Ethereum address'}), 400
-    
-    try:
-        # Create transaction data
-        tx_data = get_web3_service().create_repay_transaction(address, symbol, int(amount))
-        return jsonify(tx_data)
-    except Exception as e:
-        current_app.logger.error(f"Error preparing repay transaction: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+    if not data or not all(k in data for k in ['address', 'symbol', 'amount']):
+        raise BadRequest('Missing required parameters')
+
+    address = data['address']
+    symbol = data['symbol']
+    amount = data['amount']
+
+    tx_data = get_web3_service().create_repay_transaction(address, symbol, amount)
+    return jsonify(tx_data)
 
 @api_bp.route('/transactions/record', methods=['POST'])
+@handle_errors
 def record_transaction():
     """Record a successful transaction"""
     data = request.json
-    tx_hash = data.get('txHash')
-    tx_type = data.get('txType')
-    address = data.get('address')
-    symbol = data.get('symbol')
-    amount = data.get('amount')
-    
-    if not all([tx_hash, tx_type, address, symbol, amount]):
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
+    if not data or not all(k in data for k in ['txHash', 'txType', 'address', 'symbol', 'amount']):
+        raise BadRequest('Missing required parameters')
+
+    tx_hash = data['txHash']
+    tx_type = data['txType']
+    address = data['address']
+    symbol = data['symbol']
+    amount = data['amount']
+
+    # Validate transaction types
+    valid_tx_types = ['deposit', 'withdraw', 'borrow', 'repay']
+    if tx_type not in valid_tx_types:
+        raise BadRequest('Invalid transaction type')
+
+    # Get transaction receipt to confirm transaction
+    receipt = get_web3_service().get_transaction_receipt(tx_hash)
+    if not receipt or receipt['status'] != 1:
+        raise BadRequest('Transaction failed or not found')
+
+    # Get user and asset
+    user = User.query.filter_by(address=address.lower()).first()
+    if not user:
+        user = User(address=address.lower())
+        db.session.add(user)
+
+    asset = Asset.query.filter_by(symbol=symbol, is_active=True).first()
+    if not asset:
+        raise NotFound('Asset not found')
+
+    # Record transaction
+    transaction = Transaction(
+        user_id=user.id,
+        asset_id=asset.id,
+        tx_type=tx_type,
+        amount=amount,
+        tx_hash=tx_hash,
+        block_number=receipt['blockNumber']
+    )
+
     try:
-        # Get receipt to confirm transaction
-        receipt = get_web3_service().get_transaction_receipt(tx_hash)
-        if not receipt or receipt['status'] != 1:
-            return jsonify({'error': 'Transaction failed or not found'}), 400
-        
-        # Get user and asset
-        user = User.query.filter_by(address=address.lower()).first()
-        if not user:
-            user = User(address=address.lower())
-            db.session.add(user)
-            db.session.commit()
-        
-        asset = Asset.query.filter_by(symbol=symbol, is_active=True).first()
-        if not asset:
-            return jsonify({'error': 'Asset not found'}), 404
-        
-        # Record transaction
-        transaction = Transaction(
-            user_id=user.id,
-            asset_id=asset.id,
-            tx_type=tx_type,
-            amount=amount,
-            tx_hash=tx_hash,
-            block_number=receipt['blockNumber']
-        )
-        
         db.session.add(transaction)
         db.session.commit()
-        
         return jsonify({'success': True, 'id': transaction.id})
     except Exception as e:
-        current_app.logger.error(f"Error recording transaction: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        db.session.rollback()
+        current_app.logger.error(f"Database error: {str(e)}")
+        raise
 
 # Volatility endpoints
 @api_bp.route('/volatility/<string:symbol>', methods=['GET'])
