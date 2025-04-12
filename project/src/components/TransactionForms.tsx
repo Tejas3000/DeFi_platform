@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers';
+import React, { useState, useMemo } from 'react';
+import { BrowserProvider, Contract, parseUnits } from 'ethers';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Asset, Position } from '../services/api';
+import apiService from '../services/api';
+import { useApi } from '../context/ApiContext';
 
 const ERC20_ABI = [
   'function approve(address spender, uint256 amount) public returns (bool)',
@@ -12,74 +15,124 @@ const ERC20_ABI = [
 interface TransactionFormsProps {
   provider: BrowserProvider | null;
   address: string;
+  assets: Asset[];
+  userPositions: Position[];
 }
 
-const TransactionForms: React.FC<TransactionFormsProps> = ({ provider, address }) => {
+const TransactionForms: React.FC<TransactionFormsProps> = ({ 
+  provider, 
+  address,
+  assets,
+  userPositions 
+}) => {
   const [activeForm, setActiveForm] = useState<'deposit' | 'borrow' | 'repay'>('deposit');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedToken, setSelectedToken] = useState('ETH');
+  const [selectedToken, setSelectedToken] = useState('');
+  const { refreshUserData, refreshAssets } = useApi();
 
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!provider || !amount) return;
+  const selectedAsset = useMemo(() => 
+    assets.find(a => a.symbol === selectedToken), 
+    [assets, selectedToken]
+  );
+
+  const selectedPosition = useMemo(() => 
+    userPositions.find(p => p.asset === selectedToken),
+    [userPositions, selectedToken]
+  );
+
+  // Set initial selected token when assets are loaded
+  React.useEffect(() => {
+    if (assets.length > 0 && !selectedToken) {
+      setSelectedToken(assets[0].symbol);
+    }
+  }, [assets, selectedToken]);
+
+  const getAvailableToBorrow = (asset: Asset) => {
+    const totalDeposited = parseFloat(asset.totalDeposited);
+    const totalBorrowed = parseFloat(asset.totalBorrowed);
+    return Math.max(0, totalDeposited - totalBorrowed);
+  };
+
+  const handleTransaction = async (
+    type: 'deposit' | 'borrow' | 'repay',
+    prepareFn: typeof apiService.prepareDeposit
+  ) => {
+    if (!provider || !amount || !selectedToken) return;
 
     setLoading(true);
     try {
+      // Prepare transaction data
+      const response = await prepareFn(address, selectedToken, amount);
+      const txData = response.data;
+
+      // Get signer and send transaction
       const signer = await provider.getSigner();
+      
+      // If not ETH, we need to approve first
+      if (selectedAsset && selectedAsset.symbol !== 'ETH') {
+        const tokenContract = new Contract(selectedAsset.tokenAddress, ERC20_ABI, signer);
+        const allowance = await tokenContract.allowance(address, txData.to);
+        
+        if (allowance < BigInt(amount)) {
+          const approveTx = await tokenContract.approve(txData.to, parseUnits(amount, 18));
+          await toast.promise(approveTx.wait(), {
+            loading: 'Approving token...',
+            success: 'Token approved!',
+            error: 'Failed to approve token'
+          });
+        }
+      }
+
+      // Send the actual transaction
       const tx = await signer.sendTransaction({
-        to: "YOUR_CONTRACT_ADDRESS",
-        value: parseEther(amount)
+        to: txData.to,
+        data: txData.data,
+        value: txData.value || '0'
       });
       
       await toast.promise(tx.wait(), {
-        loading: 'Depositing...',
-        success: 'Deposit successful!',
-        error: 'Deposit failed'
+        loading: `${type.charAt(0).toUpperCase() + type.slice(1)}ing...`,
+        success: `${type.charAt(0).toUpperCase() + type.slice(1)} successful!`,
+        error: `${type.charAt(0).toUpperCase() + type.slice(1)} failed`
       });
+
+      // Record the transaction
+      await apiService.recordTransaction(
+        tx.hash,
+        type,
+        address,
+        selectedToken,
+        amount
+      );
+
+      // Refresh data
+      await refreshUserData(address);
+      await refreshAssets();
+      
+      // Reset form
+      setAmount('');
     } catch (error) {
-      console.error('Deposit error:', error);
-      toast.error('Failed to deposit');
+      console.error(`${type} error:`, error);
+      toast.error(`Failed to ${type}`);
     } finally {
       setLoading(false);
-      setAmount('');
     }
   };
 
-  const handleBorrow = async (e: React.FormEvent) => {
+  const handleDeposit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!provider || !amount) return;
-
-    setLoading(true);
-    try {
-      // Add your borrow contract interaction here
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Placeholder
-      toast.success('Borrow successful!');
-    } catch (error) {
-      console.error('Borrow error:', error);
-      toast.error('Failed to borrow');
-    } finally {
-      setLoading(false);
-      setAmount('');
-    }
+    handleTransaction('deposit', apiService.prepareDeposit);
   };
 
-  const handleRepay = async (e: React.FormEvent) => {
+  const handleBorrow = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!provider || !amount) return;
+    handleTransaction('borrow', apiService.prepareBorrow);
+  };
 
-    setLoading(true);
-    try {
-      // Add your repay contract interaction here
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Placeholder
-      toast.success('Repay successful!');
-    } catch (error) {
-      console.error('Repay error:', error);
-      toast.error('Failed to repay');
-    } finally {
-      setLoading(false);
-      setAmount('');
-    }
+  const handleRepay = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleTransaction('repay', apiService.prepareRepay);
   };
 
   const renderForm = () => {
@@ -94,9 +147,11 @@ const TransactionForms: React.FC<TransactionFormsProps> = ({ provider, address }
             onChange={(e) => setSelectedToken(e.target.value)}
             className="w-full bg-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="ETH">ETH</option>
-            <option value="USDC">USDC</option>
-            <option value="WBTC">WBTC</option>
+            {assets.map(asset => (
+              <option key={asset.symbol} value={asset.symbol}>
+                {asset.symbol}
+              </option>
+            ))}
           </select>
         </div>
         <div className="mb-4">
@@ -113,7 +168,24 @@ const TransactionForms: React.FC<TransactionFormsProps> = ({ provider, address }
             />
             <button
               type="button"
-              onClick={() => setAmount('max')}
+              onClick={() => {
+                if (selectedAsset && selectedPosition) {
+                  switch (activeForm) {
+                    case 'deposit':
+                      // Set max to asset balance (to be implemented)
+                      break;
+                    case 'borrow':
+                      // Set max to available borrow amount based on collateral
+                      const availableToBorrow = getAvailableToBorrow(selectedAsset);
+                      setAmount(availableToBorrow.toString());
+                      break;
+                    case 'repay':
+                      // Set max to borrowed amount
+                      setAmount(selectedPosition.borrowed);
+                      break;
+                  }
+                }
+              }}
               className="absolute right-2 top-2 text-sm text-blue-400 hover:text-blue-300"
             >
               MAX
@@ -128,6 +200,16 @@ const TransactionForms: React.FC<TransactionFormsProps> = ({ provider, address }
         return (
           <form onSubmit={handleDeposit}>
             {commonInputs}
+            {selectedAsset && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-400">
+                  Supply APY: <span className="text-white">{selectedAsset.effectiveInterestRate}%</span>
+                </p>
+                <p className="text-sm text-gray-400">
+                  Total Supplied: <span className="text-white">{selectedAsset.totalDeposited}</span>
+                </p>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading || !amount}
@@ -145,14 +227,18 @@ const TransactionForms: React.FC<TransactionFormsProps> = ({ provider, address }
         return (
           <form onSubmit={handleBorrow}>
             {commonInputs}
-            <div className="mb-4">
-              <p className="text-sm text-gray-400">
-                Available to Borrow: <span className="text-white">1000 USDC</span>
-              </p>
-              <p className="text-sm text-gray-400">
-                Borrow APY: <span className="text-white">3.5%</span>
-              </p>
-            </div>
+            {selectedAsset && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-400">
+                  Borrow APY: <span className="text-white">{selectedAsset.effectiveInterestRate}%</span>
+                </p>
+                <p className="text-sm text-gray-400">
+                  Available to Borrow: <span className="text-white">
+                    {getAvailableToBorrow(selectedAsset).toString()}
+                  </span>
+                </p>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading || !amount}
@@ -170,11 +256,16 @@ const TransactionForms: React.FC<TransactionFormsProps> = ({ provider, address }
         return (
           <form onSubmit={handleRepay}>
             {commonInputs}
-            <div className="mb-4">
-              <p className="text-sm text-gray-400">
-                Outstanding Debt: <span className="text-white">500 USDC</span>
-              </p>
-            </div>
+            {selectedPosition && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-400">
+                  Outstanding Debt: <span className="text-white">{selectedPosition.borrowed}</span>
+                </p>
+                <p className="text-sm text-gray-400">
+                  Interest Due: <span className="text-white">{selectedPosition.interestDue}</span>
+                </p>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading || !amount}
