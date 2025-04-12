@@ -8,75 +8,13 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "internalType": "string",
-        "name": "symbol",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "tokenAddress",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "priceFeed",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "baseInterestRate",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "collateralFactor",
-        "type": "uint256"
-      }
-    ],
-    "name": "AssetAdded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "symbol",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "baseInterestRate",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "collateralFactor",
-        "type": "uint256"
-      }
-    ],
-    "name": "AssetUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
         "indexed": true,
         "internalType": "address",
         "name": "user",
         "type": "address"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "string",
         "name": "symbol",
         "type": "string"
@@ -101,7 +39,7 @@
         "type": "address"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "string",
         "name": "symbol",
         "type": "string"
@@ -117,36 +55,131 @@
     "type": "event"
   },
   {
+    "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
         "internalType": "string",
         "name": "symbol",
         "type": "string"
       },
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldRate",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newRate",
+        "type": "uint256"
+      }
+    ],
+    "name": "InterestRateUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "address",
-        "name": "tokenAddress",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "interest",
+        "type": "uint256"
+      }
+    ],
+    "name": "Repay",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdraw",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_symbol",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_tokenAddress",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "priceFeed",
+        "name": "_priceFeedAddress",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "baseInterestRate",
+        "name": "_baseInterestRate",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "collateralFactor",
+        "name": "_collateralFactor",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "decimals",
-        "type": "uint8"
       }
     ],
     "name": "addAsset",
@@ -157,91 +190,13 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "assetSymbols",
-    "outputs": [
-      {
         "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "name": "assets",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "tokenAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "priceFeed",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "decimals",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "baseInterestRate",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "collateralFactor",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "currentInterestRate",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalDeposited",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalBorrowed",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "isActive",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "_amount",
         "type": "uint256"
       }
     ],
@@ -254,12 +209,12 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "_amount",
         "type": "uint256"
       }
     ],
@@ -285,7 +240,7 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       }
     ],
@@ -305,6 +260,16 @@
         "internalType": "uint256",
         "name": "totalBorrowed",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "interestRate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "collateralFactor",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -314,7 +279,7 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       }
     ],
@@ -333,7 +298,7 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       }
     ],
@@ -352,12 +317,12 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "user",
+        "name": "_user",
         "type": "address"
       },
       {
         "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       }
     ],
@@ -383,29 +348,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "symbol",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "liquidate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "owner",
     "outputs": [
@@ -422,12 +364,12 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "_amount",
         "type": "uint256"
       }
     ],
@@ -440,35 +382,12 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       },
       {
         "internalType": "uint256",
-        "name": "baseInterestRate",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "collateralFactor",
-        "type": "uint256"
-      }
-    ],
-    "name": "updateAsset",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "symbol",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "newInterestRate",
+        "name": "_newRate",
         "type": "uint256"
       }
     ],
@@ -480,52 +399,13 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
         "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "name": "userPositions",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "deposited",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "borrowed",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "lastInterestUpdate",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "interestIndex",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "symbol",
+        "name": "_symbol",
         "type": "string"
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "_amount",
         "type": "uint256"
       }
     ],
