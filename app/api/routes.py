@@ -279,6 +279,12 @@ def get_volatility_history(symbol):
     
     return jsonify(result)
 
+# Health check endpoint
+@api_bp.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy', 'message': 'API is running'}), 200
+
 # Helper functions
 def _calculate_health_factor(deposited, borrowed, collateral_factor):
     """Calculate health factor for a position"""

@@ -1,0 +1,8 @@
+2025-05-22 20:20:17,849 - seed_database - INFO - Starting database seeding
+2025-05-22 20:20:28,408 - seed_database - INFO - Added asset: ETH
+2025-05-22 20:20:28,408 - seed_database - INFO - Added asset: WBTC
+2025-05-22 20:20:28,409 - seed_database - INFO - Added asset: USDC
+2025-05-22 20:20:28,409 - seed_database - INFO - Added asset: DAI
+2025-05-22 20:20:28,411 - seed_database - ERROR - Error seeding database: 'VolatilityService' object has no attribute 'update_asset_volatility'
+2025-05-22 20:21:30,546 - seed_database - INFO - Starting database seeding
+2025-05-22 20:21:30,987 - seed_database - INFO - Assets already exist in database, skipping seeding

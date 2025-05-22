@@ -29,6 +29,9 @@ def create_app(config_class=Config):
     # Create database tables
     with app.app_context():
         db.create_all()
+        # Log the tables that were created
+        tables = [table_name for table_name in db.metadata.tables.keys()]
+        app.logger.info(f"Created database tables: {tables}")
     
     @app.route('/')
     def index():
